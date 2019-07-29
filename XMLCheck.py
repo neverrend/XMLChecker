@@ -80,8 +80,6 @@ def main():
                         print("Flaw: {} has to large of a location field. Remove some sites".format(name))
                     lineNum = orgLine
                     break
-        rebuilt = rebuilt + x 
-        lineNum += 1
 
         d = XSDCheck3_1.search(x)
         if d:
@@ -139,6 +137,9 @@ def main():
         if m:
             x = x.replace(m.group(), "")
             print("Flaw: {} had empty code blocks that were removed.".format(name))
+
+        rebuilt = rebuilt + x 
+        lineNum += 1
 
     newfilename = fileName.split(backslash)
 
