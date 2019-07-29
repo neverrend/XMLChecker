@@ -11,7 +11,12 @@ def main():
     
     if os.path.isfile(sys.argv[1]) == True:
         fileName = sys.argv[1]
-    
+   
+    if sys.platform == "win32":
+        backslash = "\\"
+    else:
+        backslash = "/"
+
     #print("File name: {}".format(fileName))    
 
     fd = open(fileName, "r")
@@ -135,15 +140,19 @@ def main():
             x = x.replace(m.group(), "")
             print("Flaw: {} had empty code blocks that were removed.".format(name))
 
-    newfilename = fileName.split("/")
-    newfilename = "/".join(newfilename[0:-1]) + "/new" + newfilename[-1]
+    newfilename = fileName.split(backslash)
+
+    if sys.platform == "linux":
+        newfilename = backslash.join(newfilename[0:-1]) + (backslash + "new") + newfilename[-1]
+    else:    
+        newfilename = backslash.join(newfilename[0:-1]) + "new" + newfilename[-1]
+    
     fd1 = open(newfilename, "w")
     fd1.write(rebuilt)
 
     fd.close()
     fd1.close()
 
-    #print(rebuilt)
 
 def usage():
     print("$ ./XMLChecker.py <XMLfilename>")
