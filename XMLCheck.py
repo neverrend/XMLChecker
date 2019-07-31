@@ -81,7 +81,7 @@ def main():
                     lineNum = orgLine
                     break
 
-        d = XSDCheck3_1.search(x)
+        d = XSDCheck3_1.search(x, re.MULTILINE)
         if d:
             print("Flaw: {} is missing locations!".format(name))
     
