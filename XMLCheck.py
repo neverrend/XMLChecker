@@ -138,7 +138,7 @@ def main():
             x = x.replace(m.group(), "")
             print("Flaw: {} had empty code blocks that were removed.".format(name))
 
-        rebuilt = rebuilt + x 
+        rebuilt = rebuilt + x + "\n" 
         lineNum += 1
 
     newfilename = fileName.split(backslash)
