@@ -13,13 +13,20 @@ def main():
     
     if os.path.isfile(sys.argv[1]) == True:
         fileName    = sys.argv[1]
-   
+    else:
+        print("\nThe file supplied is not valid. Try again")
+        sys.exit(1)
+
     if sys.platform == "win32":
         backslash   = "\\"
     else:
         backslash   = "/"   
 
-    fd              = open(fileName, "r")
+    try:
+        fd          = open(fileName, "r")
+    except FileNotFoundError as fileErr:
+        print("Error opening file:\n{}".format(fileErr))
+
     data            = fd.read()
     lines           = data.split("\n")
     
