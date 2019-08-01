@@ -11,7 +11,7 @@ def main():
         usage()
         sys.exit(1)
     
-    if os.path.isfile(sys.argv[1]) == True:
+    if os.path.isfile(sys.argv[1]):
         fileName    = sys.argv[1]
     else:
         print("\nThe file supplied is not valid. Try again")
@@ -38,8 +38,8 @@ def main():
     XSDCheck4       = re.compile("<\/location>") # End of location checker
     
     flawCodeBlocks  = re.compile("(?:<code>)(.*)(?:<\\/code>)") # Code blocks
-    flawCodeBlock   = re.compile("<code>(?!<\\\\code>)") # Code block
-    flawCount       = re.compile("count=\"(\d)\"") # Instance Count
+    flawCodeBlock   = re.compile("<code>(?!<\\/code>)") # Code block
+    flawCount       = re.compile("count=\"(\d+)\"") # Instance Count
     flawDesc        = re.compile("(?:<description>)(.*)(?:<\\/description>)") # flaw description
     flawExploitDesc = re.compile("(?:<exploit_desc>)(.*)(?:<\\/exploit_desc>)") # flaw exploit description
     flawExploitDiff = re.compile("(?:<exploit_difficulty>)(.*)(?:<\\/exploit_difficulty>)") # Exploit difficulty
