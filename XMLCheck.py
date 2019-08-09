@@ -40,12 +40,14 @@ def main():
     flawCodeBlocks  = re.compile("(?:<code>)(.*)(?:<\\/code>)") # Code blocks
     flawCodeBlock   = re.compile("<code>(?!<\\/code>)") # Code block
     flawCount       = re.compile("count=\"(\d+)\"") # Instance Count
+    flawCVSScheck   = re.compile("cvss=\"([\d\.]*)\"")
     flawDesc        = re.compile("(?:<description>)(.*)(?:<\\/description>)") # flaw description
     flawExploitDesc = re.compile("(?:<exploit_desc>)(.*)(?:<\\/exploit_desc>)") # flaw exploit description
     flawExploitDiff = re.compile("(?:<exploit_difficulty>)(.*)(?:<\\/exploit_difficulty>)") # Exploit difficulty
     flawInputVec    = re.compile("(?:<input_vector>)(.*)(?:<\\/input_vector>)") # Input vector
     flawName        = re.compile("(?:<name>)(.*)(?:<\\/name>)") # flaw names
     flawNote        = re.compile("(?:<note>)(.*)(?:<\\/note>)") # CVSS Score
+    flawNoteScore   = re.compile("(?:<note>)([\d\.]{3}|)([a-zA-Z0-9\s\:\\/\=\-]+|)([\d\.]{3,4})")
     flawRemdiDesc   = re.compile("(?:<remediation_desc>)(.*)(?:<\\/remediation_desc>)") # flaw remediation description
     flawRemdiScore  = re.compile("(?:<remediationeffort>)(.*)(?:<\\/remediationeffort>)") # flaw remediation score
     flawSevDesc     = re.compile("(?:<severity_desc>)(.*)(?:<\\/severity_desc>)") # flaw Severity Description
@@ -66,12 +68,21 @@ def main():
     count           = 0
     lineNum         = 0
     name            = ""
+    mes             = ""
     rebuilt         = ""
 
     for x in lines:
         
-        line = "" 
-        
+        line        = "" 
+
+        j_1 = flawCVSScheck.search(x)
+        if j_1 and len(j_1.group()):
+            cvssScore = j_1.group(1)
+            
+            if j_1.group(1) == "":
+                cvssScore = "0.0"
+                mes = "- is missing a CVSS Score"
+
         if flawName.search(x):
             name = flawName.search(x)
             name = name.group(1)
@@ -79,7 +90,11 @@ def main():
                 print("Flaw name is missing on line # {}".format(lineNum+1))
                 name = "<!MISSING!>"
             print("Flaw: {}".format(name))
-        
+            
+            if mes: 
+                print(mes)
+                mes = ""
+
         if flawCount.search(x):
             count = flawCount.search(x).group(1)
 
@@ -134,9 +149,17 @@ def main():
         if i and len(i.group()) > 1 and len(i.group(1)) == 0:
             print("- is missing a Severity description")
 
-        j = flawNote.search(x)
+        j = flawNote.search(x) 
         if j and len(j.group()) > 1 and len(j.group(1)) == 0:
             print("- is missing a CVSS score")
+        
+        j_2 = flawNoteScore.search(x)
+        if j_2 and len(j_2.group()) > 1:
+            noteScore = j_2.group(3)
+            #print("Note Score: {}".format(float(noteScore)))
+            if float(noteScore) != float(cvssScore):
+                print("- Note Score({}) and CVSS({}) score do not match"
+                        .format(noteScore, cvssScore))
 
         k = flawInputVec.search(x)
         if k and len(k.group()) > 1 and len(k.group(1)) == 0:
@@ -156,7 +179,7 @@ def main():
        
         if endOfFlaw.search(x): 
             if count != codeCount:
-                print("- has a count of \"{}\" and \"{}\" many instances\n"
+                print("- has a count of \"{}\" and \"{}\" instances\n"
                         .format(count, codeCount))
             codeCount = 0
 
