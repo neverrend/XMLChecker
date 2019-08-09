@@ -23,7 +23,7 @@ def main():
         backslash   = "/"   
 
     try:
-        fd          = open(fileName, "r")
+        fd          = open(fileName, "r", encoding="utf8")
     except FileNotFoundError as fileErr:
         print("Error opening file:\n{}".format(fileErr))
 
