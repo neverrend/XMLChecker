@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from defusedxml.ElementTree import *
 import sys
 
@@ -21,6 +22,12 @@ flawParts = ["name","description", "remediationeffort",
              "appendix/"]
 count = 0 
 
+# How to remove attributes from a tag.
+if root.attrib["assurance_level"]:
+    root.attrib.pop("assurance_level", None)
+    print("[*]  Assurance_level was deleted!")
+
+# Iterating the flaws
 for flaw in root.iter("{http://www.veracode.com/schema/import}flaw"):
 
     count = count + 1
@@ -28,8 +35,8 @@ for flaw in root.iter("{http://www.veracode.com/schema/import}flaw"):
     for x in attribs:
         if flaw.attrib[x] == "" or flaw.attrib[x] == "0":
             print("\t- {} is missing.".format(x))
-        else:    
-            print("Flaw Attribute {}: {}".format(x, flaw.attrib[x]))
+        #else:    
+        #    print("Flaw Attribute {}: {}".format(x, flaw.attrib[x]))
     
     for x in flawParts:
     
@@ -43,8 +50,8 @@ for flaw in root.iter("{http://www.veracode.com/schema/import}flaw"):
             else:
                 print("\t- {} is missing".format(x))
         
-        else:
-            print("Flaw Part {}:\n\t- {}".format(x, flaw.find(head).text))
+        #else:
+        #    print("Flaw Part {}:\n\t- {}".format(x, flaw.find(head).text))
     print()
     
     if breakP:
