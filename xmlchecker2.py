@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 from defusedxml.ElementTree import *
+import copy
 import json
 import sys
-
 
 class xmlReport:
     def __init__(self):
@@ -37,7 +37,7 @@ class xmlReport:
         flawParts = ["name","description", "remediationeffort",
                      "remediation_desc", "exploit_desc", "severity_desc",
                      "note", "input_vector", "location", "exploit_difficulty",
-                     "appendix/", "code"]
+                     "appendix/"]
         count = 0
         for flaw in root.iter("{http://www.veracode.com/schema/import}flaw"):
             count = count + 1
@@ -82,15 +82,16 @@ class xmlReport:
                     self.flawProps["Flaw Exploit Difficulty"] = flaw.find(head).text \
                             if flaw.find(head) != None else ""
                 if part == "appendix/": self.flawProps["Flaw Appendix"]["Appendix Description"] = \
-                            flaw.find(head).text if flaw.find(head) != None else ""
-                if part == "code": 
-                    instanceNum = instanceNum + 1
-                    self.flawProps["Flaw Appendix"]["Instance #"+str(instanceNum)] = \
-                            flaw.find(head).text if flaw.find(head) != None else ""
+                            flaw.find(head).text if flaw.find(head) != None else "" 
 
-            self.flaws["Flaw #"+str(count)] = self.flawProps
-            if count == 2: break 
-        print(json.dumps(self.flaws, indent=4))
+            for code in flaw.findall('.//{http://www.veracode.com/schema/import}code'):
+                instanceNum = instanceNum + 1
+                self.flawProps["Flaw Appendix"]["Instance #"+str(instanceNum)] = code.text \
+                        if code.text != None else ""
+            
+            self.flaws["Flaw #"+str(count)] = copy.deepcopy(self.flawProps)
+            #break 
+        #print(json.dumps(self.flaws, indent=4))
 
 
 def main():
