@@ -22,4 +22,4 @@ $ XMLChecker.py <xmlfile.xml>
 
 ## Accolades
 
-* "XMLChecker saved my life." @Jnchi
+* "XMLChecker saved my life." [@Jnchi](https://github.com/Jnchi)
