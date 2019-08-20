@@ -117,6 +117,11 @@ class xmlReport:
 
             print()
 
+    def cruftRemoval(self, root):
+        if root.attrib["assurance_level"]:
+            root.atrrib.pop("assurance_level"]
+        
+        print("[*]\t Cruft Removed from XML file.")
 def main():
     if len(sys.argv) < 2:
         print("$ ./xmlparsing_test.py <file name>")
