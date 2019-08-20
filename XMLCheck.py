@@ -104,15 +104,17 @@ class xmlReport:
                     self.flaws[flaw]["Flaw "+name] == "":
                     print("[*]\t Flaw {} is missing.".format(name))
                 elif name == "Count":
-                    print("[*]\t Counts/Instance Count: ({}/{})".format(self.flaws[flaw]["Flaw Count"],\
+                    print("[*]\t Flaw Counts/Instance Count: ({}/{})".format(self.flaws[flaw]["Flaw Count"],\
                             self.flaws[flaw]["Flaw Appendix"]["Instance Count"]))
                 elif name == "CVSS":
                     digits = re.compile("([\d\.]{3})")
                     cvssNum = digits.search(self.flaws[flaw]["Flaw Note"]).group()
                     if float(self.flaws[flaw]["Flaw "+name]) != float(cvssNum):
-                        print("[*]\t Flaw CVSS score({}) doesnt match the Note score({})"\
+                        print("[*]\t Flaw CVSS score({}) doesnt match the Note score({})."\
                                 .format(self.flaws[flaw]["Flaw "+name],cvssNum))
-                            
+                elif name == "Location":
+                    if len(self.flaws[flaw]["Flaw "+name]) > 255:
+                        print("[*]\t Flaw Location size is too large.")
 
             print()
 
