@@ -106,6 +106,9 @@ class xmlReport:
                     "Remediation", "Remediation Effort", "Exploit Description",
                     "Severity Description", "Note", "Input Vector", "Location",
                     "Exploit Difficulty"]
+
+        digits = re.compile("([^#]([\d])\.(|\))\s+\\b)")
+
         for flaw in self.flaws:
             print("{}: {}".format(flaw, self.flaws[flaw]["Flaw Name"]))
             for name in names:
@@ -116,18 +119,28 @@ class xmlReport:
                     print("[*]\t Flaw Counts/Instance Count: ({}/{})".format(self.flaws[flaw]["Flaw Count"],\
                             self.flaws[flaw]["Flaw Appendix"]["Instance Count"]))
                 elif name == "CVSS":
-                    digits = re.compile("([\d\.]{3})")
-                    cvssNum = digits.search(self.flaws[flaw]["Flaw Note"]).group()
+                    nums = re.compile("([\d\.]{3})")
+                    cvssNum = nums.search(self.flaws[flaw]["Flaw Note"]).group()
                     if float(self.flaws[flaw]["Flaw "+name]) != float(cvssNum):
                         print("[*]\t Flaw CVSS score({}) doesnt match the Note score({})."\
                                 .format(self.flaws[flaw]["Flaw "+name],cvssNum))
                 elif name == "Location":
                     if len(self.flaws[flaw]["Flaw "+name]) > 255:
                         print("[*]\t Flaw Location size is too large.")
+            for x in range(int(self.flaws[flaw]["Flaw Appendix"]["Instance Count"])):
+                a = digits.finditer(self.flaws[flaw]["Flaw Appendix"]["Instance #"+str(x+1)])
+                group = []
+    
+                for match in a:
+                    group.append(int(match.group(2)))
+            
+                if len(group) > 1 and not checkConsecutive(group):
+                    print("[*]\t Instance #{} has misnumbered steps.".format(x+1))
+                    print(group)
 
             print()
 
-    
+
     def cruftRemoval(self, root):
         codeStr = ".//{http://www.veracode.com/schema/import}code"
         chklstStr = ".//{http://www.veracode.com/schema/import}checklistflaws"
@@ -145,6 +158,9 @@ class xmlReport:
 
         print("[*]\t Cruft Removed from XML file.")
     
+
+def checkConsecutive(group):
+    return sorted(group) == list(range(min(group),max(group)+1))
 
 def writeToXML(xmlFile, et):
     newFile = "NEW_" + xmlFile
