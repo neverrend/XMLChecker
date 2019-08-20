@@ -20,7 +20,7 @@ class xmlReport:
                         "Flaw Exploit Description" : "",
                         "Flaw Severity Description" : "",
                         "Flaw Note" : "",
-                        "iFlaw Input Vector" : "",
+                        "Flaw Input Vector" : "",
                         "Flaw Location" : "",
                         "Flaw Exploit Difficulty" : "",
                         "Flaw Appendix" : { 
