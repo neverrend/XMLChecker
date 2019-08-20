@@ -2,6 +2,7 @@
 from defusedxml.ElementTree import *
 import copy
 import json
+import re
 import sys
 
 class xmlReport:
@@ -28,8 +29,6 @@ class xmlReport:
         self.flaws = {}
 
     def processFlaws(self, xmlFile):
-        #self.flawProps = json.load(self.flawProps)
-
         xml = xmlFile
         root = xml.getroot()
 
@@ -84,15 +83,39 @@ class xmlReport:
                 if part == "appendix/": self.flawProps["Flaw Appendix"]["Appendix Description"] = \
                             flaw.find(head).text if flaw.find(head) != None else "" 
 
-            for code in flaw.findall('.//{http://www.veracode.com/schema/import}code'):
+            for code in flaw.findall(".//{http://www.veracode.com/schema/import}code"):
                 instanceNum = instanceNum + 1
                 self.flawProps["Flaw Appendix"]["Instance #"+str(instanceNum)] = code.text \
                         if code.text != None else ""
-            
+
+            self.flawProps["Flaw Appendix"]["Instance Count"] = instanceNum
             self.flaws["Flaw #"+str(count)] = copy.deepcopy(self.flawProps)
-            #break 
+        #    break
         #print(json.dumps(self.flaws, indent=4))
 
+    def Analyze(self):
+        names = ["Name", "CWE", "Count", "CAPEC", "CVSS", "Description",
+                    "Remediation", "Remediation Effort", "Exploit Description",
+                    "Severity Description", "Note", "Input Vector", "Location",
+                    "Exploit Difficulty"]
+        for flaw in self.flaws:
+            print("{}: {}".format(flaw, self.flaws[flaw]["Flaw Name"]))
+            for name in names:
+                if self.flaws[flaw]["Flaw "+name] == None or \
+                    self.flaws[flaw]["Flaw "+name] == "":
+                    print("[*]\t Flaw {} is missing.".format(name))
+                elif name == "Count":
+                    print("[*]\t Counts/Instance Count: ({}/{})".format(self.flaws[flaw]["Flaw Count"],\
+                            self.flaws[flaw]["Flaw Appendix"]["Instance Count"]))
+                elif name == "CVSS":
+                    digits = re.compile("([\d\.]{3})")
+                    cvssNum = digits.search(self.flaws[flaw]["Flaw Note"]).group()
+                    if float(self.flaws[flaw]["Flaw "+name]) != float(cvssNum):
+                        print("[*]\t Flaw CVSS score({}) doesnt match the Note score({})"\
+                                .format(self.flaws[flaw]["Flaw "+name],cvssNum))
+                            
+
+            print()
 
 def main():
     if len(sys.argv) < 2:
@@ -107,5 +130,7 @@ def main():
 
     newFile.processFlaws(et)
 
+    newFile.Analyze()
+    
 if __name__ == "__main__":
     main()
