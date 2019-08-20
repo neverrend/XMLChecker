@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from defusedxml.ElementTree import *
+from xml.etree.ElementTree import register_namespace
 import copy
 import json
 import re
@@ -19,7 +20,7 @@ class xmlReport:
                         "Flaw Exploit Description" : "",
                         "Flaw Severity Description" : "",
                         "Flaw Note" : "",
-                        "Flaw Input Vector" : "",
+                        "iFlaw Input Vector" : "",
                         "Flaw Location" : "",
                         "Flaw Exploit Difficulty" : "",
                         "Flaw Appendix" : { 
@@ -29,8 +30,7 @@ class xmlReport:
         self.flaws = {}
 
     def processFlaws(self, xmlFile):
-        xml = xmlFile
-        root = xml.getroot()
+        root = xmlFile.getroot()
 
         attribs = ["cwe_id", "cvss", "capec_id", "count"]
         flawParts = ["name","description", "remediationeffort",
@@ -90,8 +90,7 @@ class xmlReport:
 
             self.flawProps["Flaw Appendix"]["Instance Count"] = instanceNum
             self.flaws["Flaw #"+str(count)] = copy.deepcopy(self.flawProps)
-        #    break
-        #print(json.dumps(self.flaws, indent=4))
+
 
     def Analyze(self):
         names = ["Name", "CWE", "Count", "CAPEC", "CVSS", "Description",
@@ -117,11 +116,28 @@ class xmlReport:
 
             print()
 
+    
     def cruftRemoval(self, root):
-        if root.attrib["assurance_level"]:
-            root.atrrib.pop("assurance_level"]
+        chklst = root.find(".//{http://www.veracode.com/schema/import}checklistflaws")
+        if len(root.attrib) == 5:
+            root.attrib.pop("assurance_level", None)
+        
+        if root.findall(".//{http://www.veracode.com/schema/import}checklistflaws"):
+            root.remove(chklst)
         
         print("[*]\t Cruft Removed from XML file.")
+    
+
+def writeToXML(xmlFile, et):
+    newFile = "NEW_" + xmlFile
+    with open(newFile, "w") as f:
+        xmlString = tostring(et.getroot(), encoding="unicode", method="xml")
+        f.write(xmlString)
+
+    print("\n[*]\t Changes have been written to: {}".format(newFile))
+
+    
+
 def main():
     if len(sys.argv) < 2:
         print("$ ./xmlparsing_test.py <file name>")
@@ -129,6 +145,8 @@ def main():
     else:
         xmlFile = sys.argv[1] 
 
+    register_namespace("", "http://www.veracode.com/schema/import")
+    
     et = parse(xmlFile)
 
     newFile = xmlReport()
@@ -136,6 +154,12 @@ def main():
     newFile.processFlaws(et)
 
     newFile.Analyze()
+
+    print("="*50+"\n")
+   
+    newFile.cruftRemoval(et.getroot())
+
+    writeToXML(xmlFile, et)
     
 if __name__ == "__main__":
     main()
