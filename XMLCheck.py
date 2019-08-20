@@ -41,56 +41,65 @@ class xmlReport:
         for flaw in root.iter("{http://www.veracode.com/schema/import}flaw"):
             count = count + 1
             instanceNum = 0
+            
+            flawProps = copy.deepcopy(self.flawProps)
+
             for attrib in attribs:
-                if attrib == "cwe_id": self.flawProps["Flaw CWE"] = flaw.attrib[attrib]
-                if attrib == "cvss": self.flawProps["Flaw CVSS"] = flaw.attrib[attrib]
-                if attrib == "capec_id": self.flawProps["Flaw CAPEC"] = flaw.attrib[attrib]
-                if attrib == "count" : self.flawProps["Flaw Count"] = flaw.attrib[attrib]
+                if attrib == "cwe_id": flawProps["Flaw CWE"] = flaw.attrib[attrib]
+                if attrib == "cvss": flawProps["Flaw CVSS"] = flaw.attrib[attrib]
+                if attrib == "capec_id": flawProps["Flaw CAPEC"] = flaw.attrib[attrib]
+                if attrib == "count" : flawProps["Flaw Count"] = flaw.attrib[attrib]
         
             for part in flawParts:
                 head = ".//{http://www.veracode.com/schema/import}"
                 head = head + part
                 if part == "name": 
-                    self.flawProps["Flaw Name"] = flaw.find(head).text \
+                    flawProps["Flaw Name"] = flaw.find(head).text \
                             if flaw.find(head) != None else ""
                 if part == "description": 
-                    self.flawProps["Flaw Description"] = flaw.find(head).text \
+                    flawProps["Flaw Description"] = flaw.find(head).text \
                             if flaw.find(head) != None else ""
                 if part == "remediationeffort": 
-                    self.flawProps["Flaw Remediation Effort"] = flaw.find(head).text \
+                    flawProps["Flaw Remediation Effort"] = flaw.find(head).text \
                             if flaw.find(head) != None else ""
                 if part == "remediation_desc": 
-                    self.flawProps["Flaw Remediation"] = flaw.find(head).text \
+                    flawProps["Flaw Remediation"] = flaw.find(head).text \
                             if flaw.find(head) != None else ""
                 if part == "exploit_desc": 
-                    self.flawProps["Flaw Exploit Description"] = flaw.find(head).text \
+                    flawProps["Flaw Exploit Description"] = flaw.find(head).text \
                             if flaw.find(head) != None else ""
                 if part == "severity_desc": 
-                    self.flawProps["Flaw Severity Description"] = flaw.find(head).text \
+                    flawProps["Flaw Severity Description"] = flaw.find(head).text \
                             if flaw.find(head) != None else ""
                 if part == "note": 
-                    self.flawProps["Flaw Note"] = flaw.find(head).text \
+                    flawProps["Flaw Note"] = flaw.find(head).text \
                             if flaw.find(head) != None else ""
                 if part == "input_vector": 
-                    self.flawProps["Flaw Input Vector"] = flaw.find(head).text \
+                    flawProps["Flaw Input Vector"] = flaw.find(head).text \
                             if flaw.find(head) != None else ""
                 if part == "location": 
-                    self.flawProps["Flaw Location"] = flaw.find(head).text \
+                    flawProps["Flaw Location"] = flaw.find(head).text \
                             if flaw.find(head) != None else ""
                 if part == "exploit_difficulty": 
-                    self.flawProps["Flaw Exploit Difficulty"] = flaw.find(head).text \
+                    flawProps["Flaw Exploit Difficulty"] = flaw.find(head).text \
                             if flaw.find(head) != None else ""
-                if part == "appendix/": self.flawProps["Flaw Appendix"]["Appendix Description"] = \
+                if part == "appendix/": flawProps["Flaw Appendix"]["Appendix Description"] = \
                             flaw.find(head).text if flaw.find(head) != None else "" 
 
-            for code in flaw.findall(".//{http://www.veracode.com/schema/import}code"):
-                instanceNum = instanceNum + 1
-                self.flawProps["Flaw Appendix"]["Instance #"+str(instanceNum)] = code.text \
-                        if code.text != None else ""
-
-            self.flawProps["Flaw Appendix"]["Instance Count"] = instanceNum
-            self.flaws["Flaw #"+str(count)] = copy.deepcopy(self.flawProps)
-
+            for appendix in flaw.findall(".//{http://www.veracode.com/schema/import}appendix"):
+                for code in appendix.findall(".//{http://www.veracode.com/schema/import}code"):
+                    if code.text == None:
+                        continue
+                    else:
+                        instanceNum = instanceNum + 1
+                        flawProps["Flaw Appendix"]["Instance #"+str(instanceNum)] = code.text \
+                                if code.text != None else ""
+            
+            flawProps["Flaw Appendix"]["Instance Count"] = instanceNum
+            self.flaws["Flaw #"+str(count)] = copy.deepcopy(flawProps)
+            
+            #print(json.dumps(self.flaws, indent=4))
+            #if count == 2: break
 
     def Analyze(self):
         names = ["Name", "CWE", "Count", "CAPEC", "CVSS", "Description",
@@ -120,13 +129,20 @@ class xmlReport:
 
     
     def cruftRemoval(self, root):
-        chklst = root.find(".//{http://www.veracode.com/schema/import}checklistflaws")
+        codeStr = ".//{http://www.veracode.com/schema/import}code"
+        chklstStr = ".//{http://www.veracode.com/schema/import}checklistflaws"
+        chklst = root.find(chklstStr)
         if len(root.attrib) == 5:
             root.attrib.pop("assurance_level", None)
         
-        if root.findall(".//{http://www.veracode.com/schema/import}checklistflaws"):
-            root.remove(chklst)
-        
+        if root.findall(chklstStr):
+            root.remove(chklst)  
+
+        for appendix in root.findall(".//{http://www.veracode.com/schema/import}appendix"):
+            for code in appendix.findall(codeStr):
+                if code.text == None:
+                    appendix.remove(code)
+
         print("[*]\t Cruft Removed from XML file.")
     
 
@@ -152,15 +168,12 @@ def main():
     et = parse(xmlFile)
 
     newFile = xmlReport()
-
     newFile.processFlaws(et)
-
     newFile.Analyze()
 
     print("="*50+"\n")
    
     newFile.cruftRemoval(et.getroot())
-
     writeToXML(xmlFile, et)
     
 if __name__ == "__main__":
