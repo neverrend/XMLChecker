@@ -1,210 +1,165 @@
-#!/usr/bin/env python3 
-
-## TODO: Put this all in a JSON object and simplify the loop.
-
-import os
+#!/usr/bin/env python3
+from defusedxml.ElementTree import *
+from xml.etree.ElementTree import register_namespace
+import copy
+import json
 import re
 import sys
 
+class xmlReport:
+    def __init__(self):
+        self.flawProps = {
+                        "Flaw Name":"",
+                        "Flaw CWE" : "",
+                        "Flaw CVSS" : "",
+                        "Flaw CAPEC" : "",
+                        "Flaw Count" : "",
+                        "Flaw Description" : "",
+                        "Flaw Remediation" : "",
+                        "Flaw Remediation Effort" : "",
+                        "Flaw Exploit Description" : "",
+                        "Flaw Severity Description" : "",
+                        "Flaw Note" : "",
+                        "iFlaw Input Vector" : "",
+                        "Flaw Location" : "",
+                        "Flaw Exploit Difficulty" : "",
+                        "Flaw Appendix" : { 
+                                "Appendix Description" : "",
+                                }
+                        }
+        self.flaws = {}
+
+    def processFlaws(self, xmlFile):
+        root = xmlFile.getroot()
+
+        attribs = ["cwe_id", "cvss", "capec_id", "count"]
+        flawParts = ["name","description", "remediationeffort",
+                     "remediation_desc", "exploit_desc", "severity_desc",
+                     "note", "input_vector", "location", "exploit_difficulty",
+                     "appendix/"]
+        count = 0
+        for flaw in root.iter("{http://www.veracode.com/schema/import}flaw"):
+            count = count + 1
+            instanceNum = 0
+            for attrib in attribs:
+                if attrib == "cwe_id": self.flawProps["Flaw CWE"] = flaw.attrib[attrib]
+                if attrib == "cvss": self.flawProps["Flaw CVSS"] = flaw.attrib[attrib]
+                if attrib == "capec_id": self.flawProps["Flaw CAPEC"] = flaw.attrib[attrib]
+                if attrib == "count" : self.flawProps["Flaw Count"] = flaw.attrib[attrib]
+        
+            for part in flawParts:
+                head = ".//{http://www.veracode.com/schema/import}"
+                head = head + part
+                if part == "name": 
+                    self.flawProps["Flaw Name"] = flaw.find(head).text \
+                            if flaw.find(head) != None else ""
+                if part == "description": 
+                    self.flawProps["Flaw Description"] = flaw.find(head).text \
+                            if flaw.find(head) != None else ""
+                if part == "remediationeffort": 
+                    self.flawProps["Flaw Remediation Effort"] = flaw.find(head).text \
+                            if flaw.find(head) != None else ""
+                if part == "remediation_desc": 
+                    self.flawProps["Flaw Remediation"] = flaw.find(head).text \
+                            if flaw.find(head) != None else ""
+                if part == "exploit_desc": 
+                    self.flawProps["Flaw Exploit Description"] = flaw.find(head).text \
+                            if flaw.find(head) != None else ""
+                if part == "severity_desc": 
+                    self.flawProps["Flaw Severity Description"] = flaw.find(head).text \
+                            if flaw.find(head) != None else ""
+                if part == "note": 
+                    self.flawProps["Flaw Note"] = flaw.find(head).text \
+                            if flaw.find(head) != None else ""
+                if part == "input_vector": 
+                    self.flawProps["Flaw Input Vector"] = flaw.find(head).text \
+                            if flaw.find(head) != None else ""
+                if part == "location": 
+                    self.flawProps["Flaw Location"] = flaw.find(head).text \
+                            if flaw.find(head) != None else ""
+                if part == "exploit_difficulty": 
+                    self.flawProps["Flaw Exploit Difficulty"] = flaw.find(head).text \
+                            if flaw.find(head) != None else ""
+                if part == "appendix/": self.flawProps["Flaw Appendix"]["Appendix Description"] = \
+                            flaw.find(head).text if flaw.find(head) != None else "" 
+
+            for code in flaw.findall(".//{http://www.veracode.com/schema/import}code"):
+                instanceNum = instanceNum + 1
+                self.flawProps["Flaw Appendix"]["Instance #"+str(instanceNum)] = code.text \
+                        if code.text != None else ""
+
+            self.flawProps["Flaw Appendix"]["Instance Count"] = instanceNum
+            self.flaws["Flaw #"+str(count)] = copy.deepcopy(self.flawProps)
+
+
+    def Analyze(self):
+        names = ["Name", "CWE", "Count", "CAPEC", "CVSS", "Description",
+                    "Remediation", "Remediation Effort", "Exploit Description",
+                    "Severity Description", "Note", "Input Vector", "Location",
+                    "Exploit Difficulty"]
+        for flaw in self.flaws:
+            print("{}: {}".format(flaw, self.flaws[flaw]["Flaw Name"]))
+            for name in names:
+                if self.flaws[flaw]["Flaw "+name] == None or \
+                    self.flaws[flaw]["Flaw "+name] == "":
+                    print("[*]\t Flaw {} is missing.".format(name))
+                elif name == "Count":
+                    print("[*]\t Counts/Instance Count: ({}/{})".format(self.flaws[flaw]["Flaw Count"],\
+                            self.flaws[flaw]["Flaw Appendix"]["Instance Count"]))
+                elif name == "CVSS":
+                    digits = re.compile("([\d\.]{3})")
+                    cvssNum = digits.search(self.flaws[flaw]["Flaw Note"]).group()
+                    if float(self.flaws[flaw]["Flaw "+name]) != float(cvssNum):
+                        print("[*]\t Flaw CVSS score({}) doesnt match the Note score({})"\
+                                .format(self.flaws[flaw]["Flaw "+name],cvssNum))
+                            
+
+            print()
+
+    
+    def cruftRemoval(self, root):
+        chklst = root.find(".//{http://www.veracode.com/schema/import}checklistflaws")
+        if len(root.attrib) == 5:
+            root.attrib.pop("assurance_level", None)
+        
+        if root.findall(".//{http://www.veracode.com/schema/import}checklistflaws"):
+            root.remove(chklst)
+        
+        print("[*]\t Cruft Removed from XML file.")
+    
+
+def writeToXML(xmlFile, et):
+    newFile = "NEW_" + xmlFile
+    with open(newFile, "w") as f:
+        xmlString = tostring(et.getroot(), encoding="unicode", method="xml")
+        f.write(xmlString)
+
+    print("\n[*]\t Changes have been written to: {}".format(newFile))
+
+    
+
 def main():
     if len(sys.argv) < 2:
-        usage()
+        print("$ ./xmlparsing_test.py <file name>")
         sys.exit(1)
-    
-    if os.path.isfile(sys.argv[1]):
-        fileName    = sys.argv[1]
     else:
-        print("\nThe file supplied is not valid. Try again")
-        sys.exit(1)
+        xmlFile = sys.argv[1] 
 
-    if sys.platform == "win32":
-        backslash   = "\\"
-    else:
-        backslash   = "/"   
-
-    try:
-        fd          = open(fileName, "r", encoding="utf8")
-    except FileNotFoundError as fileErr:
-        print("Error opening file:\n{}".format(fileErr))
-
-    data            = fd.read()
-    lines           = data.split("\n")
+    register_namespace("", "http://www.veracode.com/schema/import")
     
-    # Compiled regexs to check for XSD junk first
-    XSDCheck1       = re.compile("assurance_level=\"-1\"(?=[>])") # assurance_level="-1"
-    XSDCheck2       = re.compile("<([/]|)checklistflaws>") # <checklistflaws></checklistflaws>
-    XSDCheck3_1     = re.compile("(?:^[\s]+<location>)(.*)(?:<\\/location>$)") # Location character # checker
-    XSDCheck3       = re.compile("(?:[\s]+<location>)") # Location character # checker
-    XSDCheck4       = re.compile("<\/location>") # End of location checker
+    et = parse(xmlFile)
+
+    newFile = xmlReport()
+
+    newFile.processFlaws(et)
+
+    newFile.Analyze()
+
+    print("="*50+"\n")
+   
+    newFile.cruftRemoval(et.getroot())
+
+    writeToXML(xmlFile, et)
     
-    flawCodeBlocks  = re.compile("(?:<code>)(.*)(?:<\\/code>)") # Code blocks
-    flawCodeBlock   = re.compile("<code>(?!<\\/code>)") # Code block
-    flawCount       = re.compile("count=\"(\d+)\"") # Instance Count
-    flawCVSScheck   = re.compile("cvss=\"([\d\.]*)\"")
-    flawDesc        = re.compile("(?:<description>)(.*)(?:<\\/description>)") # flaw description
-    flawExploitDesc = re.compile("(?:<exploit_desc>)(.*)(?:<\\/exploit_desc>)") # flaw exploit description
-    flawExploitDiff = re.compile("(?:<exploit_difficulty>)(.*)(?:<\\/exploit_difficulty>)") # Exploit difficulty
-    flawInputVec    = re.compile("(?:<input_vector>)(.*)(?:<\\/input_vector>)") # Input vector
-    flawName        = re.compile("(?:<name>)(.*)(?:<\\/name>)") # flaw names
-    flawNote        = re.compile("(?:<note>)(.*)(?:<\\/note>)") # CVSS Score
-    flawNoteScore   = re.compile("(?:<note>)([\d\.]{3}|)([a-zA-Z0-9\s\:\\/\=\-]+|)([\d\.]{3,4})")
-    flawRemdiDesc   = re.compile("(?:<remediation_desc>)(.*)(?:<\\/remediation_desc>)") # flaw remediation description
-    flawRemdiScore  = re.compile("(?:<remediationeffort>)(.*)(?:<\\/remediationeffort>)") # flaw remediation score
-    flawSevDesc     = re.compile("(?:<severity_desc>)(.*)(?:<\\/severity_desc>)") # flaw Severity Description
-    endOfFlaw       = re.compile("<\\/flaw>") # End of a flaw
-
-    print('''
-        ** * * * * * * * * * * * * * * * * * * * **
-        **      *0*      *8*                     **
-        **     \|/________\|/___________         **   
-        **     ALWAYS CHECK THE NEW FILE         **
-        **      THAT IS GENERATED IN MFFC        **
-        **       I AM NOT INFALLABLE ;D          **
-        **                                       **
-        ** * * * * * * * * * * * * * * * * * * * ** 
-    ''')
-    
-    codeCount       = 0
-    count           = 0
-    lineNum         = 0
-    name            = ""
-    mes             = ""
-    rebuilt         = ""
-
-    for x in lines:
-        
-        line        = "" 
-
-        j_1 = flawCVSScheck.search(x)
-        if j_1 and len(j_1.group()):
-            cvssScore = j_1.group(1)
-            
-            if j_1.group(1) == "":
-                cvssScore = "0.0"
-                mes = "- is missing a CVSS Score"
-
-        if flawName.search(x):
-            name = flawName.search(x)
-            name = name.group(1)
-            if len(name) == 0:
-                print("Flaw name is missing on line # {}".format(lineNum+1))
-                name = "<!MISSING!>"
-            print("Flaw: {}".format(name))
-            
-            if mes: 
-                print(mes)
-                mes = ""
-
-        if flawCount.search(x):
-            count = flawCount.search(x).group(1)
-
-        a = XSDCheck1.search(x)
-        if a:
-            x = x.replace(a.group(), "")
-            print("assurance_level found and deleted!")
-        
-        b = XSDCheck2.search(x)
-        if b:
-            x = x.replace(b.group(), "")
-            print("<checklistflaws> found and deleted!")
-
-        c = XSDCheck3.search(x)
-        if c:
-            orgLine = lineNum
-            
-            while range(len(lines[lineNum])):
-                
-                line = line + lines[lineNum]
-                end = XSDCheck4.search(lines[lineNum])
-                lineNum += 1
-
-                if end:
-                    line = len(list(line))
-                    if line > 255:
-                        print("- has to large of a location field. Remove some sites")
-                    lineNum = orgLine
-                    break
-
-        d = XSDCheck3_1.search(x, re.MULTILINE)
-        if d:
-            print("- is missing locations")
-    
-        e = flawDesc.search(x)
-        if e and len(e.group()) > 1 and len(e.group(1)) == 0:
-            print("- is missing a description")
-
-        f = flawRemdiScore.search(x)
-        if f and len(f.group()) > 1 and f.group(1) == "0":
-            print("- is missing a Remediation Score")
-
-        g = flawRemdiDesc.search(x)
-        if g and len(g.group()) > 1 and len(g.group(1)) == 0:
-            print("- is missing a Remediation Description")
-
-        h = flawExploitDesc.search(x)
-        if h and len(h.group()) > 1 and len(h.group(1)) == 0:
-            print("- is missing a Exploit description")
-
-        i = flawSevDesc.search(x)
-        if i and len(i.group()) > 1 and len(i.group(1)) == 0:
-            print("- is missing a Severity description")
-
-        j = flawNote.search(x) 
-        if j and len(j.group()) > 1 and len(j.group(1)) == 0:
-            print("- is missing a CVSS score")
-        
-        j_2 = flawNoteScore.search(x)
-        if j_2 and len(j_2.group()) > 1:
-            noteScore = j_2.group(3)
-            #print("Note Score: {}".format(float(noteScore)))
-            if float(noteScore) != float(cvssScore):
-                print("- Note Score({}) and CVSS({}) score do not match"
-                        .format(noteScore, cvssScore))
-
-        k = flawInputVec.search(x)
-        if k and len(k.group()) > 1 and len(k.group(1)) == 0:
-            print("- is missing a Input Vector")
-
-        l = flawExploitDiff.search(x)
-        if l and len(l.group()) > 1 and l.group(1) == "0":
-            print("- is missing Exploit Difficulty")
-
-        m = flawCodeBlocks.search(x)
-        if m:
-            x = x.replace(m.group(), "")
-            print("- had empty code blocks that were removed.")
-
-        if flawCodeBlock.search(x):
-            codeCount += 1
-       
-        if endOfFlaw.search(x): 
-            if count != codeCount:
-                print("- has a count of \"{}\" and \"{}\" instances\n"
-                        .format(count, codeCount))
-            codeCount = 0
-
-        rebuilt = rebuilt + x + "\n" 
-        lineNum += 1
-
-    
-    newfilename = fileName.split(backslash)
-
-    if sys.platform == "linux":
-        newfilename = "." + backslash.join(newfilename[0:-1]) + (backslash + "new") + newfilename[-1]
-    else:    
-        newfilename = backslash.join(newfilename[0:-1]) + "new" + newfilename[-1]
-    
-    fd1 = open(newfilename, "w")
-    fd1.write(rebuilt)
-
-    fd.close()
-    fd1.close()
-
-
-def usage():
-    print("$ ./XMLChecker.py <XMLfilename>")
-    
-
 if __name__ == "__main__":
     main()
-
