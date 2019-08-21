@@ -89,7 +89,7 @@ class xmlReport:
             for appendix in flaw.findall(".//{http://www.veracode.com/schema/import}appendix"):
                 for code in appendix.findall(".//{http://www.veracode.com/schema/import}code"):
                     if code.text == None:
-                        continue
+                        appendix.remove(code)
                     else:
                         instanceNum = instanceNum + 1
                         flawProps["Flaw Appendix"]["Instance #"+str(instanceNum)] = code.text \
@@ -136,7 +136,7 @@ class xmlReport:
             
                 if len(group) > 1 and not checkConsecutive(group):
                     print("[*]\t Instance #{} has misnumbered steps.".format(x+1))
-                    print(group)
+                    #print(group)
 
             print()
 
@@ -150,11 +150,6 @@ class xmlReport:
         
         if root.findall(chklstStr):
             root.remove(chklst)  
-
-        for appendix in root.findall(".//{http://www.veracode.com/schema/import}appendix"):
-            for code in appendix.findall(codeStr):
-                if code.text == None:
-                    appendix.remove(code)
 
         print("[*]\t Cruft Removed from XML file.")
     
