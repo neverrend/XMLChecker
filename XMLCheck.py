@@ -3,6 +3,7 @@ from defusedxml.ElementTree import *
 from xml.etree.ElementTree import register_namespace
 import copy
 import json
+import os
 import re
 import sys
 
@@ -107,7 +108,9 @@ class xmlReport:
                     "Severity Description", "Note", "Input Vector", "Location",
                     "Exploit Difficulty"]
 
-        digits = re.compile("([^#]([\d])\.(|\))\s+\\b)")
+        digits = re.compile("([\d]+)")
+        repoSteps = re.compile("Reproduction Steps\\n([=]*\\n|)([a-zA-Z0-9.!@#$%^&*()_+\-=~`{}[\]\\\|{}:;'\",.<>/?\\n\s\\t]*)\\nThe REQUEST is:")
+
 
         for flaw in self.flaws:
             print("{}: {}".format(flaw, self.flaws[flaw]["Flaw Name"]))
@@ -128,15 +131,24 @@ class xmlReport:
                     if len(self.flaws[flaw]["Flaw "+name]) > 255:
                         print("[*]\t Flaw Location size is too large.")
             for x in range(int(self.flaws[flaw]["Flaw Appendix"]["Instance Count"])):
-                a = digits.finditer(self.flaws[flaw]["Flaw Appendix"]["Instance #"+str(x+1)])
+                inst = repoSteps.search(self.flaws[flaw]["Flaw Appendix"]["Instance #"+str(x+1)])
                 group = []
-    
-                for match in a:
-                    group.append(int(match.group(2)))
-            
+                
+                if inst:
+                    repoBlock = inst.group(2)
+                    repoLines = repoBlock.splitlines()
+                    #print(repoLines)     
+                    for line in repoLines:
+                        for index in range(len(repoLines)):
+                            if digits.search(line[:3]):
+                                group.append(int(digits.search(line[:3]).group()))
+                                break
+                #print(group)
+
                 if len(group) > 1 and not checkConsecutive(group):
                     print("[*]\t Instance #{} has misnumbered steps.".format(x+1))
                     #print(group)
+            #break
 
             print()
 
@@ -176,7 +188,13 @@ def main():
 
     register_namespace("", "http://www.veracode.com/schema/import")
     
-    et = parse(xmlFile)
+    try:
+        #path = os.path.dirname(xmlFile)
+        #print("{} {}".format(path, xmlFile))
+        et = parse(xmlFile)
+    except FileNotFoundError:
+        print("File error, {} was either not found or could not read it!".format(xmlFile))
+        exit()
 
     newFile = xmlReport()
     newFile.processFlaws(et)
