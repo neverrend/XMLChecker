@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from defusedxml.ElementTree import *
 from xml.etree.ElementTree import register_namespace
+import base64
 import copy
 import json
 import os
@@ -95,6 +96,14 @@ class xmlReport:
                         instanceNum = instanceNum + 1
                         flawProps["Flaw Appendix"]["Instance #"+str(instanceNum)] = code.text \
                                 if code.text != None else ""
+                for screenshot in appendix.findall(".//{http://www.veracode.com/schema/import}screenshot"):
+                    #print(screenshot.attrib)
+                    if screenshot.attrib["format"] == "undefined":
+                        #print(screenshot.attrib["format"])
+                        for data in screenshot.findall(".//{http://www.veracode.com/schema/import}data"):
+                            #print(data.text)
+                            mime = checkImg(data.text)
+                            screenshot.attrib["format"] = mime
             
             flawProps["Flaw Appendix"]["Instance Count"] = instanceNum
             self.flaws["Flaw #"+str(count)] = copy.deepcopy(flawProps)
@@ -111,9 +120,9 @@ class xmlReport:
         digits = re.compile("([\d]+)")
         repoSteps = re.compile("Reproduction Steps\\n([=]*\\n|)([a-zA-Z0-9.!@#$%^&*()_+\-=~`{}[\]\\\|{}:;'\",.<>/?\\n\s\\t]*)\\nThe REQUEST is:")
 
-
         for flaw in self.flaws:
             print("{}: {}".format(flaw, self.flaws[flaw]["Flaw Name"]))
+            
             for name in names:
                 if self.flaws[flaw]["Flaw "+name] == None or \
                     self.flaws[flaw]["Flaw "+name] == "":
@@ -130,6 +139,7 @@ class xmlReport:
                 elif name == "Location":
                     if len(self.flaws[flaw]["Flaw "+name]) > 255:
                         print("[*]\t Flaw Location size is too large.")
+            
             for x in range(int(self.flaws[flaw]["Flaw Appendix"]["Instance Count"])):
                 inst = repoSteps.search(self.flaws[flaw]["Flaw Appendix"]["Instance #"+str(x+1)])
                 group = []
@@ -138,6 +148,7 @@ class xmlReport:
                     repoBlock = inst.group(2)
                     repoLines = repoBlock.splitlines()
                     #print(repoLines)     
+                    
                     for line in repoLines:
                         for index in range(len(repoLines)):
                             if digits.search(line[:3]):
@@ -165,6 +176,19 @@ class xmlReport:
 
         print("[*]\t Cruft Removed from XML file.")
     
+
+def checkImg(imgData):
+    #print(str(imgData.text))
+    header = str(base64.b64decode(imgData)[:5])
+    #print("{} b'\\xff\\xd8\\xff\\xe0\\00'".format(header))
+    if header == "b'\\xff\\xd8\\xff\\xe0\\x00'":
+        header = "JPEG"
+    elif header == "b'\\x89PNG\\r'":
+        header = "PNG"
+    elif header == "b'GIF89'":
+        header = "GIF"
+    
+    return header
 
 def checkConsecutive(group):
     return sorted(group) == list(range(min(group),max(group)+1))
