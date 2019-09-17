@@ -182,7 +182,7 @@ def checkImg(imgData):
     header = str(base64.b64decode(imgData)[:5])
     #print("{} b'\\xff\\xd8\\xff\\xe0\\00'".format(header))
     if header == "b'\\xff\\xd8\\xff\\xe0\\x00'":
-        header = "JPEG"
+        header = "JPG"
     elif header == "b'\\x89PNG\\r'":
         header = "PNG"
     elif header == "b'GIF89'":
