@@ -97,19 +97,14 @@ class xmlReport:
                         flawProps["Flaw Appendix"]["Instance #"+str(instanceNum)] = code.text \
                                 if code.text != None else ""
                 for screenshot in appendix.findall(".//{http://www.veracode.com/schema/import}screenshot"):
-                    #print(screenshot.attrib)
-                    if screenshot.attrib["format"] == "undefined":
-                        #print(screenshot.attrib["format"])
-                        for data in screenshot.findall(".//{http://www.veracode.com/schema/import}data"):
-                            #print(data.text)
-                            mime = checkImg(data.text)
-                            screenshot.attrib["format"] = mime
+                    for data in screenshot.findall(".//{http://www.veracode.com/schema/import}data"):
+                        mime = checkImg(data.text)
+                        screenshot.attrib["format"] = mime
+                        data.text = data.text.strip()
             
             flawProps["Flaw Appendix"]["Instance Count"] = instanceNum
             self.flaws["Flaw #"+str(count)] = copy.deepcopy(flawProps)
             
-            #print(json.dumps(self.flaws, indent=4))
-            #if count == 2: break
 
     def Analyze(self):
         names = ["Name", "CWE", "Count", "CAPEC", "CVSS", "Description",
@@ -147,18 +142,15 @@ class xmlReport:
                 if inst:
                     repoBlock = inst.group(2)
                     repoLines = repoBlock.splitlines()
-                    #print(repoLines)     
                     
                     for line in repoLines:
                         for index in range(len(repoLines)):
                             if digits.search(line[:3]):
                                 group.append(int(digits.search(line[:3]).group()))
                                 break
-                #print(group)
 
                 if len(group) > 1 and not checkConsecutive(group):
                     print("[*]\t Instance #{} has misnumbered steps.".format(x+1))
-                    #print(group)
             #break
 
             print()
@@ -178,9 +170,8 @@ class xmlReport:
     
 
 def checkImg(imgData):
-    #print(str(imgData.text))
     header = str(base64.b64decode(imgData)[:5])
-    #print("{} b'\\xff\\xd8\\xff\\xe0\\00'".format(header))
+    
     if header == "b'\\xff\\xd8\\xff\\xe0\\x00'":
         header = "JPG"
     elif header == "b'\\x89PNG\\r'":
