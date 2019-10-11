@@ -186,8 +186,8 @@ def checkConsecutive(group):
 
 def writeToXML(xmlFile, et):
     newFile = "NEW_" + xmlFile
-    with open(newFile, "w") as f:
-        xmlString = tostring(et.getroot(), encoding="unicode", method="xml")
+    with open(newFile, "wb") as f:
+        xmlString = tostring(et.getroot(), encoding="utf-8", method="xml")
         f.write(xmlString)
 
     print("\n[*]\t Changes have been written to: {}".format(newFile))
