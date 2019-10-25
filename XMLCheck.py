@@ -215,6 +215,7 @@ class xmlReport:
         codeStr = ".//{http://www.veracode.com/schema/import}code"
         chklstStr = ".//{http://www.veracode.com/schema/import}checklistflaws"
         chklst = root.find(chklstStr)
+        
         if len(root.attrib) == 5:
             root.attrib.pop("assurance_level", None)
         
@@ -229,10 +230,20 @@ def hasTemplate(name, value):
     if default.search(value):
         print("[*]\t Flaw {} has template content still in it.".format(name))
 
+
 def isTooBig(name, value):
-    if len(value) > 2048:
-        print("[*]\t Flaw {} is too big. 2048 is the max length.".format(name))
-        return True
+    if name == "Description":
+        if len(value) > 4000:
+            print("[*]\t Flaw {} is too big. 4000 is the max length.".format(name))
+            return True
+    elif name == "Note":
+        if len(value) > 1024:
+            print("[*]\t Flaw {} is too big. 1024 is the max length.".format(name))
+            return True
+    else:
+        if len(value) > 2048:
+            print("[*]\t Flaw {} is too big. 2048 is the max length.".format(name))
+            return True
     return False
 
 
