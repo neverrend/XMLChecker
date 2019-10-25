@@ -31,6 +31,7 @@ class xmlReport:
                         }
         self.flaws = {}
 
+
     def processFlaws(self, xmlFile):
         root = xmlFile.getroot()
 
@@ -113,36 +114,89 @@ class xmlReport:
                     "Exploit Difficulty"]
 
         digits = re.compile("([\d]+)")
-        repoSteps = re.compile("Reproduction Steps\\n([=]*\\n|)([a-zA-Z0-9.!@#$%^&*()_+\-=~`{}[\]\\\|{}:;'\",.<>/?\\n\s\\t]*)\\nThe REQUEST is:")
+        repoSteps = re.compile("Reproduction Steps\\n([=]*\\n|)([a-zA-Z0-9.!@#$%^&*()_+\-=~`{}[\]\\\|{}:;'\",.<>/?\\n\s\\t]*)(\\nThe REQUEST is:|)")
 
         for flaw in self.flaws:
             print("{}: {}".format(flaw, self.flaws[flaw]["Flaw Name"]))
             
             for name in names:
-                if self.flaws[flaw]["Flaw "+name] == None or \
-                    self.flaws[flaw]["Flaw "+name] == "":
+                value = self.flaws[flaw]["Flaw "+name]
+
+                if value == None or value == "":
                     print("[*]\t Flaw {} is missing.".format(name))
+
+                elif name == "CAPEC":
+                    if not isEmpty(name,value) and value == "0":
+                        print("[*]\t Flaw {} has a 0 value.".format(name)) 
+
                 elif name == "Count":
-                    print("[*]\t Flaw Counts/Instance Count: ({}/{})".format(self.flaws[flaw]["Flaw Count"],\
-                            self.flaws[flaw]["Flaw Appendix"]["Instance Count"]))
+                    if not isEmpty(name,value):
+                        print("[*]\t Flaw Counts/Instance Count: ({}/{})"\
+                                .format(self.flaws[flaw]["Flaw Count"],\
+                                self.flaws[flaw]["Flaw Appendix"]["Instance Count"]))
+
                 elif name == "CVSS":
-                    nums = re.compile("([\d\.]{3})")
-                    cvssNum = nums.search(self.flaws[flaw]["Flaw Note"]).group()
-                    if float(self.flaws[flaw]["Flaw "+name]) != float(cvssNum):
-                        print("[*]\t Flaw CVSS score({}) doesnt match the Note score({})."\
-                                .format(self.flaws[flaw]["Flaw "+name],cvssNum))
-                elif name == "Location":
-                    if len(self.flaws[flaw]["Flaw "+name]) > 255:
-                        print("[*]\t Flaw Location size is too large.")
-            
-            for x in range(int(self.flaws[flaw]["Flaw Appendix"]["Instance Count"])):
-                inst = repoSteps.search(self.flaws[flaw]["Flaw Appendix"]["Instance #"+str(x+1)])
-                group = []
+                    if not isEmpty(name,value):
+                        nums = re.compile("([\d\.]{3})")
+                        cvssNum = nums.search(self.flaws[flaw]["Flaw Note"]).group()
+                        if float(value) != float(cvssNum):
+                            print("[*]\t Flaw CVSS score({}) doesnt match the Note score({})."\
+                                    .format(value,cvssNum))
+
+                elif name == "CWE":
+                    isEmpty(name,value)
+
+                elif name == "Description":
+                    hasTemplate(name,value)
+                    isEmpty(name,value)
+                    isTooBig(name,value)
                 
+                elif name == "Exploit Description": 
+                    hasTemplate(name,value)
+                    isEmpty(name,value)
+                    isTooBig(name,value)
+
+                elif name == "Exploit Difficulty":
+                    if not isEmpty(name,value) and value == "0":
+                        print("[*]\t Flaw {} has a 0 value.".format(name))
+
+                elif name == "Input Vector":
+                    isEmpty(name,value)
+                    
+                elif name == "Location":
+                    if not isEmpty(name,value) and len(value) > 255:
+                        print("[*]\t Flaw Location size is too large. 255 is the max length.")
+            
+                elif name == "Note":
+                    hasTemplate(name,value)
+                    isEmpty(name,value)
+                    isTooBig(name,value)
+
+                elif name == "Remediation":
+                    hasTemplate(name,value)
+                    isEmpty(name,value)
+                    isTooBig(name,value) 
+
+                elif name == "Remediation Effort":
+                    if not isEmpty(name,value) and value == "0":
+                        print("[*]\t Flaw {} has a 0 value.".format(name)) 
+
+                elif name == "Severity Description":
+                    hasTemplate(name,value)
+                    isEmpty(name,value)
+                    isTooBig(name,value) 
+
+            for x in range(int(self.flaws[flaw]["Flaw Appendix"]["Instance Count"])):
+                instanceBlock = self.flaws[flaw]["Flaw Appendix"]["Instance #"+str(x+1)]
+                inst = repoSteps.search(instanceBlock)
+                group = []
+
                 if inst:
                     repoBlock = inst.group(2)
                     repoLines = repoBlock.splitlines()
                     
+                    hasTemplate("Intance #{}".format(x+1),instanceBlock)
+        
                     for line in repoLines:
                         for index in range(len(repoLines)):
                             if digits.search(line[:3]):
@@ -151,8 +205,9 @@ class xmlReport:
 
                 if len(group) > 1 and not checkConsecutive(group):
                     print("[*]\t Instance #{} has misnumbered steps.".format(x+1))
-            #break
 
+            #print(json.dumps(self.flaws[flaw],sort_keys=True,indent=4))
+            #break
             print()
 
 
@@ -167,7 +222,26 @@ class xmlReport:
             root.remove(chklst)  
 
         print("[*]\t Cruft Removed from XML file.")
-    
+
+
+def hasTemplate(name, value):
+    default = re.compile("{[a-zA-Z\_\-]+}")
+    if default.search(value):
+        print("[*]\t Flaw {} has template content still in it.".format(name))
+
+def isTooBig(name, value):
+    if len(value) > 2048:
+        print("[*]\t Flaw {} is too big. 2048 is the max length.".format(name))
+        return True
+    return False
+
+
+def isEmpty(name, value):
+    if not value:
+        print("[*]\t Flaw {} is empty".format(name))
+        return True
+    return False
+
 
 def checkImg(imgData):
     header = str(base64.b64decode(imgData)[:5])
@@ -181,8 +255,10 @@ def checkImg(imgData):
     
     return header
 
+
 def checkConsecutive(group):
     return sorted(group) == list(range(min(group),max(group)+1))
+
 
 def writeToXML(xmlFile, et):
     newFile = "NEW_" + xmlFile
@@ -192,7 +268,6 @@ def writeToXML(xmlFile, et):
 
     print("\n[*]\t Changes have been written to: {}".format(newFile))
 
-    
 
 def main():
     if len(sys.argv) < 2:
@@ -219,6 +294,7 @@ def main():
    
     newFile.cruftRemoval(et.getroot())
     writeToXML(xmlFile, et)
-    
+
+
 if __name__ == "__main__":
     main()
