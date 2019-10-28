@@ -138,7 +138,8 @@ class xmlReport:
                 elif name == "CVSS":
                     if not isEmpty(name,value):
                         nums = re.compile("([\d\.]{3})")
-                        cvssNum = nums.search(self.flaws[flaw]["Flaw Note"]).group()
+                        cvssNum = nums.search(self.flaws[flaw]["Flaw Note"]).group()\
+                                if self.flaws[flaw]["Flaw Note"] != None else "0.0"
                         if float(value) != float(cvssNum):
                             print("[*]\t Flaw CVSS score({}) doesnt match the Note score({})."\
                                     .format(value,cvssNum))
