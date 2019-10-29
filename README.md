@@ -12,7 +12,7 @@ $ docker build . -t cyberninjas/xmlchecker
 
 Grab the dependencies.
 ```sh
-$ pip install defusedxml
+$ pip install -r requirements.txt
 ```
 
 Run the script.
