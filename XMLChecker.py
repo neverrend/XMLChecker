@@ -4,6 +4,7 @@ from xml.etree.ElementTree import register_namespace
 import base64
 import copy
 import json
+from lxml import etree
 import os
 import re
 import sys
@@ -223,7 +224,29 @@ class xmlReport:
         if root.findall(chklstStr):
             root.remove(chklst)  
 
-        print("[*]\t Cruft Removed from XML file.")
+        #print("[*]\t Cruft Removed from XML file.")
+
+
+# XSD validation, see: https://stackoverflow.com/a/37972081/11777580
+def xsdValidate(xml, xsd):
+    xmlschema_doc = etree.parse(xsd)
+    xmlschema = etree.XMLSchema(xmlschema_doc)
+    xml_doc = etree.parse(xml)
+
+    prvError = ""
+    
+    try:
+        xmlschema.assertValid(xml_doc)
+        print("[*]\t XML validated against XSD.")
+        return True
+    except etree.DocumentInvalid as err:
+        print("[*]\t Errors with the XML:")
+        for err in xmlschema.error_log:
+            if prvError != err.line:
+                print("\t\t Line {}: {}".format(err.line, err.message))
+            prvError = err.line
+        print()
+        return False
 
 
 def hasTemplate(name, value):
@@ -280,6 +303,10 @@ def writeToXML(xmlFile, et):
 
     print("\n[*]\t Changes have been written to: {}".format(newFile))
 
+def fileExists(fileName):
+    if not os.path.exists(fileName):
+        print("File error, {} was either not found or could not read it!".format(fileName))
+        exit()
 
 def main():
     if len(sys.argv) < 2:
@@ -288,15 +315,13 @@ def main():
     else:
         xmlFile = sys.argv[1] 
 
+    path_to_schema = "manualflawfeed.xsd"
     register_namespace("", "http://www.veracode.com/schema/import")
     
-    try:
-        #path = os.path.dirname(xmlFile)
-        #print("{} {}".format(path, xmlFile))
-        et = parse(xmlFile)
-    except FileNotFoundError:
-        print("File error, {} was either not found or could not read it!".format(xmlFile))
-        exit()
+    fileExists(xmlFile)
+    fileExists(path_to_schema)
+
+    et = parse(xmlFile)
 
     newFile = xmlReport()
     newFile.processFlaws(et)
@@ -305,7 +330,9 @@ def main():
     print("="*50+"\n")
    
     newFile.cruftRemoval(et.getroot())
-    writeToXML(xmlFile, et)
+    res = xsdValidate(xmlFile, path_to_schema)
+    if res: writeToXML(xmlFile, et)
+    else: print("[*]\t Schema validation failed, fix it and try again to save a new file.")
 
 
 if __name__ == "__main__":
