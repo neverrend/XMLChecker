@@ -3,6 +3,6 @@ FROM python:3.7.4-alpine3.9
 WORKDIR /usr/src/xmlchecker
 COPY . /usr/src/xmlchecker
 
-RUN pip install defusedxml
+RUN pip install -r requirements.txt
 
-ENTRYPOINT ["./XMLCheck.py"]
+ENTRYPOINT ["./XMLChecker.py"]
