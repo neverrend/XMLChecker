@@ -115,7 +115,10 @@ class xmlReport:
                     "Exploit Difficulty"]
 
         digits = re.compile("([\d]+)")
-        repoSteps = re.compile("Reproduction Steps\\n([=]*\\n|)([a-zA-Z0-9.!@#$%^&*()_+\-=~`{}[\]\\\|{}:;'\",.<>/?\\n\s\\t]*)(\\nThe REQUEST is:|)")
+        repoSteps = re.compile("Reproduction Steps\\n([=]*\\n|)([a-zA-Z0-9.!@#$%^&*()_+\-\
+                =~`{}[\]\|:;'\",<>/?\\n\s\\t]*)(\\nThe REQUEST is:)")
+        repoStepsNoREQUEST = re.compile("Reproduction Steps\\n([=]*\\n|)([a-zA-Z0-9.!@#$%\
+                ^&*()_+\-=~`{}[\]\|:;'\",<>/?\\n\s\\t]*)")
 
         for flaw in self.flaws:
             print("{}: {}".format(flaw, self.flaws[flaw]["Flaw Name"]))
@@ -191,10 +194,11 @@ class xmlReport:
             for x in range(int(self.flaws[flaw]["Flaw Appendix"]["Instance Count"])):
                 instanceBlock = self.flaws[flaw]["Flaw Appendix"]["Instance #"+str(x+1)]
                 inst = repoSteps.search(instanceBlock)
+                inst2 = repoStepsNoREQUEST.search(instanceBlock)
                 group = []
 
-                if inst:
-                    repoBlock = inst.group(2)
+                if inst or inst2:
+                    repoBlock = inst.group(2) if inst else inst2.group(2)
                     repoLines = repoBlock.splitlines()
                     
                     hasTemplate("Intance #{}".format(x+1),instanceBlock)
@@ -206,6 +210,7 @@ class xmlReport:
                                 break
 
                 if len(group) > 1 and not checkConsecutive(group):
+                    #print(repoLines)
                     print("[*]\t Instance #{} has misnumbered steps.".format(x+1))
 
             #print(json.dumps(self.flaws[flaw],sort_keys=True,indent=4))
@@ -250,7 +255,7 @@ def xsdValidate(xml, xsd):
 
 
 def hasTemplate(name, value):
-    default = re.compile("{[a-zA-Z\_\-]+}")
+    default = re.compile("{[a-zA-Z\_\-:]+}")
     if default.search(value):
         print("[*]\t Flaw {} has template content still in it.".format(name))
 
