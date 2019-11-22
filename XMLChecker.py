@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.8
 from defusedxml.ElementTree import *
 from xml.etree.ElementTree import register_namespace
 import base64
@@ -115,10 +115,11 @@ class xmlReport:
                     "Exploit Difficulty"]
 
         digits = re.compile("([\d]+)")
-        repoSteps = re.compile("Reproduction Steps\\n([=]*\\n|)([a-zA-Z0-9.!@#$%^&*()_+\-\
-                =~`{}[\]\|:;'\",<>/?\\n\s\\t]*)(\\nThe REQUEST is:)")
-        repoStepsNoREQUEST = re.compile("Reproduction Steps\\n([=]*\\n|)([a-zA-Z0-9.!@#$%\
-                ^&*()_+\-=~`{}[\]\|:;'\",<>/?\\n\s\\t]*)")
+        repoSteps = re.compile("Reproduction Steps\\n([=]*\\n|)([a-zA-Z0-9.!@#$%\
+                                ^&*()_+\-=~`{}[\]\|:;'\",<>/?\\n\s\\t]*)")
+	
+        req_resp = re.compile("(The[a-zA-Z\s]+:\\n[=]+\\n[a-zA-Z0-9\s\\n\\t~!@#$\
+                               %^&*()_+`\-=[\]{}\\\|;':\",.<>/?]*)")
 
         for flaw in self.flaws:
             print("{}: {}".format(flaw, self.flaws[flaw]["Flaw Name"]))
@@ -191,17 +192,23 @@ class xmlReport:
                     isEmpty(name,value)
                     isTooBig(name,value) 
 
-            for x in range(int(self.flaws[flaw]["Flaw Appendix"]["Instance Count"])):
-                instanceBlock = self.flaws[flaw]["Flaw Appendix"]["Instance #"+str(x+1)]
+            for num in range(int(self.flaws[flaw]["Flaw Appendix"]["Instance Count"])):
+                instanceBlock = self.flaws[flaw]["Flaw Appendix"]["Instance #"+str(num+1)]
+                
+                req_match = req_resp.search(instanceBlock)
+                if req_match:
+                        #print(req_match.group())
+                        instanceBlock = instanceBlock.replace(req_match.group(),"")
+                        #print(instanceBlock)
+
                 inst = repoSteps.search(instanceBlock)
-                inst2 = repoStepsNoREQUEST.search(instanceBlock)
                 group = []
 
-                if inst or inst2:
-                    repoBlock = inst.group(2) if inst else inst2.group(2)
+                if inst:
+                    repoBlock = inst.group(2)
                     repoLines = repoBlock.splitlines()
                     
-                    hasTemplate("Intance #{}".format(x+1),instanceBlock)
+                    hasTemplate("Intance #{}".format(num+1),instanceBlock)
         
                     for line in repoLines:
                         for index in range(len(repoLines)):
@@ -210,11 +217,13 @@ class xmlReport:
                                 break
 
                 if len(group) > 1 and not checkConsecutive(group):
+                    #print(group)
                     #print(repoLines)
-                    print("[*]\t Instance #{} has misnumbered steps.".format(x+1))
+                    print("[*]\t Instance #{} has misnumbered steps.".format(num+1))
 
-            #print(json.dumps(self.flaws[flaw],sort_keys=True,indent=4))
-            #break
+            #if flaw == "Flaw #1":
+            #    print(json.dumps(self.flaws[flaw],sort_keys=True,indent=4))
+            #    break
             print()
 
 
@@ -242,7 +251,7 @@ def xsdValidate(xml, xsd):
     
     try:
         xmlschema.assertValid(xml_doc)
-        print("[*]\t XML validated against XSD.")
+        print("[*]\t XML validated against XSD!")
         return True
     except etree.DocumentInvalid as err:
         print("[*]\t Errors with the XML:")
@@ -306,7 +315,8 @@ def writeToXML(xmlFile, et):
         xmlString = tostring(et.getroot(), encoding="utf-8", method="xml")
         f.write(xmlString)
 
-    print("\n[*]\t Changes have been written to: {}".format(newFile))
+    print("[*]\t Changes have been written to: {}\n".format(newFile))
+    return newFile
 
 def fileExists(fileName):
     if not os.path.exists(fileName):
@@ -335,9 +345,11 @@ def main():
     print("="*50+"\n")
    
     newFile.cruftRemoval(et.getroot())
-    res = xsdValidate(xmlFile, path_to_schema)
-    if res: writeToXML(xmlFile, et)
-    else: print("[*]\t Schema validation failed, fix it and try again to save a new file.")
+    newXML = writeToXML(xmlFile, et)
+
+    if not xsdValidate(newXML, path_to_schema):
+        print("[*]\t XSD check failed, fixes to the XML may have been applied.\
+		 Work off of {} and try again.".format(newXML))
 
 
 if __name__ == "__main__":
