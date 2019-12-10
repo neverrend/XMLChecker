@@ -251,7 +251,7 @@ def xsdValidate(xml, xsd):
     
     try:
         xmlschema.assertValid(xml_doc)
-        print("[*]\t XML validated against XSD!")
+        print("[*]\t XML validated against XSD! Work off of \"{}\" now.".format(xml))
         return True
     except etree.DocumentInvalid as err:
         print("[*]\t Errors with the XML:")
@@ -286,7 +286,9 @@ def isTooBig(name, value):
 
 
 def isEmpty(name, value):
-    if not value:
+    spaces = re.compile("^[\s]+?$",re.MULTILINE)
+    match = spaces.search(value)
+    if not value or match:
         print("[*]\t Flaw {} is empty".format(name))
         return True
     return False
