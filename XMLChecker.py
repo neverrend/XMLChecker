@@ -288,7 +288,6 @@ def isTooBig(name, value):
 def isEmpty(name, value):
     spaces = re.compile("^[^\\t\\n][\\s]+?$",re.MULTILINE)
     match = spaces.search(value)
-    if name == "Description" and match: print(match)
     if not value or match:
         print("[*]\t Flaw {} is empty".format(name))
         return True
