@@ -112,7 +112,7 @@ class xmlReport:
         names = ["Name", "CWE", "Count", "CAPEC", "CVSS", "Description",
                     "Remediation", "Remediation Effort", "Exploit Description",
                     "Severity Description", "Note", "Input Vector", "Location",
-                    "Exploit Difficulty"]
+                    "Exploit Difficulty", "Appendix"]
 
         digits = re.compile("([\d]+)")
         repoSteps = re.compile("Reproduction Steps\\n([=]*\\n|)([a-zA-Z0-9.!@#$%\
@@ -191,6 +191,13 @@ class xmlReport:
                     hasTemplate(name,value)
                     isEmpty(name,value)
                     isTooBig(name,value) 
+
+                elif name == "Appendix":
+                    name = "Appendix Description"
+                    value = self.flaws[flaw]["Flaw Appendix"][name]
+                    
+                    hasTemplate(name, value)
+                    isEmpty(name, value)
 
             for num in range(int(self.flaws[flaw]["Flaw Appendix"]["Instance Count"])):
                 instanceBlock = self.flaws[flaw]["Flaw Appendix"]["Instance #"+str(num+1)]
