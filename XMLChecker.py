@@ -92,10 +92,7 @@ class xmlReport:
 
             for appendix in flaw.findall(".//{http://www.veracode.com/schema/import}appendix"):
                 for code in appendix.findall(".//{http://www.veracode.com/schema/import}code"):
-                    empty = re.compile("([\\n]+|[\s]+)")
-                    #if len(code.text) == 1:
-                    #    print(empty.search(code.text))
-                    if code.text == None or empty.search(code.text):
+                    if code.text == None or isEmpty("code block", code.text):
                         appendix.remove(code)
                     else:
                         instanceNum = instanceNum + 1
@@ -297,7 +294,17 @@ def isTooBig(name, value):
 
 def isEmpty(name, value):
     spaces = re.compile("^[^\\t\\n][\\s]+?$",re.MULTILINE)
+    newLine = re.compile("\\n")
     match = spaces.search(value)
+
+    if name == "code block":
+        match2 = newLine.search(value[:1])
+        if match2:
+            #print(match2)
+            return True
+    else:
+        return False
+
     if not value or match:
         print("[*]\t Flaw {} is empty".format(name))
         return True
