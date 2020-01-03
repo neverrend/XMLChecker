@@ -92,7 +92,7 @@ class xmlReport:
 
             for appendix in flaw.findall(".//{http://www.veracode.com/schema/import}appendix"):
                 for code in appendix.findall(".//{http://www.veracode.com/schema/import}code"):
-                    if code.text == None or isEmpty("code block", code.text):
+                    if code.text == None or len(code.text) == 1:
                         appendix.remove(code)
                     else:
                         instanceNum = instanceNum + 1
