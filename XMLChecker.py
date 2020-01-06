@@ -144,7 +144,7 @@ class xmlReport:
                         iCountSTR = "\033[92m"+str(iCount)+"\033[00m"
                         
 
-                    if fCount > 9:
+                    if fCount < iCount and fCount < 9 or fCount > 9:
                         fCountSTR = "\033[91m" +str(fCount)+ "\033[00m"
                     else:
                         fCountSTR = "\033[92m" +str(fCount)+ "\033[00m"
