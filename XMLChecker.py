@@ -135,10 +135,23 @@ class xmlReport:
                         print("[*]\t Flaw {} has a 0 value.".format(name)) 
 
                 elif name == "Count":
-                    if not isEmpty(name,value):
+                    fCount = int(self.flaws[flaw]["Flaw Count"])
+                    iCount = self.flaws[flaw]["Flaw Appendix"]["Instance Count"]
+                    
+                    if iCount != fCount:
+                        iCountSTR = "\033[91m"+str(iCount)+"\033[00m"
+                    else:
+                        iCountSTR = "\033[92m"+str(iCount)+"\033[00m"
+                        
+
+                    if fCount > 9:
+                        fCountSTR = "\033[91m" +str(fCount)+ "\033[00m"
+                    else:
+                        fCountSTR = "\033[92m" +str(fCount)+ "\033[00m"
+
+                    if not isEmpty(name,value): 
                         print("[*]\t Flaw Counts/Instance Count: ({}/{})"\
-                                .format(self.flaws[flaw]["Flaw Count"],\
-                                self.flaws[flaw]["Flaw Appendix"]["Instance Count"]))
+                                .format(fCountSTR,iCountSTR))
 
                 elif name == "CVSS":
                     if not isEmpty(name,value):
