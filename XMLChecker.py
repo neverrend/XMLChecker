@@ -138,7 +138,7 @@ class xmlReport:
                     fCount = int(self.flaws[flaw]["Flaw Count"])
                     iCount = self.flaws[flaw]["Flaw Appendix"]["Instance Count"]
                     
-                    if iCount != fCount:
+                    if iCount != fCount and fCount != 9:
                         iCountSTR = "\033[91m"+str(iCount)+"\033[00m"
                     else:
                         iCountSTR = "\033[92m"+str(iCount)+"\033[00m"
