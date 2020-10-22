@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python
 from defusedxml.ElementTree import *
 from xml.etree.ElementTree import register_namespace
 import base64
@@ -307,6 +307,7 @@ def isTooBig(name, value):
 
 def isEmpty(name, value):
     spaces = re.compile("^[^\\t\\n][\\s]+?$",re.MULTILINE)
+    #emptyText = re.compile("^([\\t\\n\\r\\s]*)$",re.MULTILINE)
     newLine = re.compile("\\n")
     match = spaces.search(value)
 
@@ -315,12 +316,14 @@ def isEmpty(name, value):
         if match2:
             #print(match2)
             return True
-    else:
-        return False
-
-    if not value or match:
+    elif name == "Location":
+        if not value or match or len(value) < 2:
+            print("[*]\t Flaw {} is empty".format(name))
+            return True
+    elif not value or match:
         print("[*]\t Flaw {} is empty".format(name))
         return True
+    
     return False
 
 
