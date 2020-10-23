@@ -31,6 +31,7 @@ class xmlReport:
                                 }
                         }
         self.flaws = {}
+        self.codeBlocksDeleted = False
 
 
     def processFlaws(self, xmlFile):
@@ -94,6 +95,7 @@ class xmlReport:
                 for code in appendix.findall(".//{http://www.veracode.com/schema/import}code"):
                     if code.text == None or len(code.text) == 1:
                         appendix.remove(code)
+                        self.codeBlocksDeleted = True
                     else:
                         instanceNum = instanceNum + 1
                         flawProps["Flaw Appendix"]["Instance #"+str(instanceNum)] = code.text \
@@ -271,7 +273,7 @@ def xsdValidate(xml, xsd):
     
     try:
         xmlschema.assertValid(xml_doc)
-        print("[*]\t XML validated against XSD! Work off of \"{}\" now.".format(xml))
+        print("[*]\t XML validated against XSD!")
         return True
     except etree.DocumentInvalid as err:
         print("[*]\t Errors with the XML:")
@@ -350,7 +352,7 @@ def writeToXML(xmlFile, et):
         xmlString = tostring(et.getroot(), encoding="utf-8", method="xml")
         f.write(xmlString)
 
-    print("[*]\t Changes have been written to: {}\n".format(newFile))
+    print("[*]\t Changes have been written to: {}".format(newFile))
     return newFile
 
 def fileExists(fileName):
@@ -386,6 +388,8 @@ def main():
         print("[*]\t XSD check failed, fixes to the XML may have been applied.\
 		 Work off of {} and try again.".format(newXML))
 
+    if newFile.codeBlocksDeleted: 
+        print("[*]\t Empty code blocks were discovered and removed. Utilize the NEW file for future reporting.")
 
 if __name__ == "__main__":
     main()
