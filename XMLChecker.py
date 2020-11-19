@@ -127,7 +127,7 @@ class xmlReport:
         for flaw in self.flaws:
             print("{}: {}".format(flaw, self.flaws[flaw]["Flaw Name"]))
             
-            self.content = "{} - {}\n".format(self.flaws[flaw]["Flaw CWE"], self.flaws[flaw]["Flaw Name"]) + self.content  
+            self.content = self.content + "{} - {}\n".format(self.flaws[flaw]["Flaw CWE"], self.flaws[flaw]["Flaw Name"])
             
             for name in names:
                 value = self.flaws[flaw]["Flaw "+name]
