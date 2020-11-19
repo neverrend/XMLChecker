@@ -32,6 +32,7 @@ class xmlReport:
                         }
         self.flaws = {}
         self.codeBlocksDeleted = False
+        self.content = ""
 
 
     def processFlaws(self, xmlFile):
@@ -121,10 +122,12 @@ class xmlReport:
                                 ^&*()_+\-=~`{}[\]\|:;'\",<>/?\\n\s\\t]*)")
 	
         req_resp = re.compile("(The[a-zA-Z\s]+:\\n[=]+\\n[a-zA-Z0-9\s\\n\\t~!@#$\
-                               %^&*()_+`\-=[\]{}\\\|;':\",.<>/?]*)")
+                               %^&*()_+`\-=[\]{}\\\|;':\",.<>/?]*)") 
 
         for flaw in self.flaws:
             print("{}: {}".format(flaw, self.flaws[flaw]["Flaw Name"]))
+            
+            self.content = "{} - {}\n".format(self.flaws[flaw]["Flaw CWE"], self.flaws[flaw]["Flaw Name"]) + self.content  
             
             for name in names:
                 value = self.flaws[flaw]["Flaw "+name]
@@ -346,6 +349,10 @@ def checkConsecutive(group):
     return sorted(group) == list(range(min(group),max(group)+1))
 
 
+def writeToFile(fileName, contents):
+    with open(fileName, "wb") as f:
+        f.write(contents.encode("utf-8"))
+
 def writeToXML(xmlFile, et):
     newFile = "NEW_" + xmlFile
     with open(newFile, "wb") as f:
@@ -367,6 +374,7 @@ def main():
     else:
         xmlFile = sys.argv[1] 
 
+    asanaOutName = "AsanaList.txt"
     path_to_schema = "manualflawfeed.xsd"
     register_namespace("", "http://www.veracode.com/schema/import")
     
@@ -378,6 +386,9 @@ def main():
     newFile = xmlReport()
     newFile.processFlaws(et)
     newFile.Analyze()
+
+    #print(newFile.content)
+    writeToFile(asanaOutName, newFile.content)
 
     print("="*50+"\n")
    
