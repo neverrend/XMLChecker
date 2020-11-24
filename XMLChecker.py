@@ -8,6 +8,7 @@ from lxml import etree
 import os
 import re
 import sys
+import argparse
 
 class xmlReport:
     def __init__(self):
@@ -117,7 +118,7 @@ class xmlReport:
                     "Severity Description", "Note", "Input Vector", "Location",
                     "Exploit Difficulty", "Appendix"]
 
-        digits = re.compile("([\d]+)")
+        digits = re.compile("^([\\d]\.+)")
         repoSteps = re.compile("Reproduction Steps\\n([=]*\\n|)([a-zA-Z0-9.!@#$%\
                                 ^&*()_+\-=~`{}[\]\|:;'\",<>/?\\n\s\\t]*)")
 	
@@ -238,7 +239,8 @@ class xmlReport:
                     for line in repoLines:
                         for index in range(len(repoLines)):
                             if digits.search(line[:3]):
-                                group.append(int(digits.search(line[:3]).group()))
+                                lengthOfNum = len(digits.search(line[:3]).group())-1
+                                group.append(int(digits.search(line[:3]).group()[:lengthOfNum]))
                                 break
 
                 if len(group) > 1 and not checkConsecutive(group):
@@ -311,21 +313,23 @@ def isTooBig(name, value):
 
 
 def isEmpty(name, value):
-    spaces = re.compile("^[^\\t\\n][\\s]+?$",re.MULTILINE)
+    #spaces = re.compile("^[\\n]*[\\s]*?$",re.MULTILINE)
+    chars = re.compile(".*\S.*",re.MULTILINE)
     #emptyText = re.compile("^([\\t\\n\\r\\s]*)$",re.MULTILINE)
     newLine = re.compile("\\n")
-    match = spaces.search(value)
-
+    #match = spaces.search(value)
+    match = chars.search(value)
+    
     if name == "code block":
-        match2 = newLine.search(value[:1])
-        if match2:
+        match3 = newLine.search(value[:1])
+        if match3:
             #print(match2)
             return True
     elif name == "Location":
-        if not value or match or len(value) < 2:
+        if not value or not match or len(value) < 2:
             print("[*]\t Flaw {} is empty".format(name))
             return True
-    elif not value or match:
+    elif not value or not match:
         print("[*]\t Flaw {} is empty".format(name))
         return True
     
@@ -368,11 +372,13 @@ def fileExists(fileName):
         exit()
 
 def main():
-    if len(sys.argv) < 2:
-        print("$ ./xmlparsing_test.py <file name>")
-        sys.exit(1)
-    else:
-        xmlFile = sys.argv[1] 
+    parser = argparse.ArgumentParser(description='Checker for XML Veracode Reports.')
+    parser.add_argument('file', help='XML file to check')
+    parser.add_argument('-o', '--output', action='store_true', help='Output a new XML File with certain applied fixes')
+    parser.add_argument('-l', '--list', action='store_true', help='Output a list of flaws for Asana')
+    
+    args = parser.parse_args()
+    xmlFile = args.file
 
     asanaOutName = "AsanaList.txt"
     path_to_schema = "manualflawfeed.xsd"
@@ -387,20 +393,21 @@ def main():
     newFile.processFlaws(et)
     newFile.Analyze()
 
-    #print(newFile.content)
-    writeToFile(asanaOutName, newFile.content)
+    if args.list:
+        #print(newFile.content)
+        writeToFile(asanaOutName, newFile.content)
 
-    print("="*50+"\n")
-   
-    newFile.cruftRemoval(et.getroot())
-    newXML = writeToXML(xmlFile, et)
+    if args.output:
+        print("="*50+"\n")
+        newFile.cruftRemoval(et.getroot())
+        newXML = writeToXML(xmlFile, et)
+        
+        if not xsdValidate(newXML, path_to_schema):
+            print("[*]\t XSD check failed, fixes to the XML may have been applied.\
+             Work off of {} and try again.".format(newXML))
 
-    if not xsdValidate(newXML, path_to_schema):
-        print("[*]\t XSD check failed, fixes to the XML may have been applied.\
-		 Work off of {} and try again.".format(newXML))
-
-    if newFile.codeBlocksDeleted: 
-        print("[*]\t Empty code blocks were discovered and removed. Utilize the NEW file for future reporting.")
+        if newFile.codeBlocksDeleted: 
+            print("[*]\t Empty code blocks were discovered and removed. Utilize the NEW file for future reporting.")
 
 if __name__ == "__main__":
     main()
