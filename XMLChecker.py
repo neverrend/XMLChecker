@@ -9,6 +9,7 @@ import os
 import re
 import sys
 import argparse
+from spellchecker import SpellChecker
 
 class xmlReport:
     def __init__(self):
@@ -121,6 +122,8 @@ class xmlReport:
         digits = re.compile("^([\\d]\.+)")
         repoSteps = re.compile("Reproduction Steps\\n([=]*\\n|)([a-zA-Z0-9.!@#$%\
                                 ^&*()_+\-=~`{}[\]\|:;'\",<>/?\\n\s\\t]*)")
+        repoSteps4SpellChecker = re.compile("Reproduction Steps\\n([=]*\\n|)([a-zA-Z0-9.!@#$%\
+                                ^&*()_+\-=~`{}[\]\|:;'\",<>/?\\n\s\\t]*)=====")
 	
         req_resp = re.compile("(The[a-zA-Z\s]+:\\n[=]+\\n[a-zA-Z0-9\s\\n\\t~!@#$\
                                %^&*()_+`\-=[\]{}\\\|;':\",.<>/?]*)") 
@@ -170,20 +173,24 @@ class xmlReport:
 
                 elif name == "CWE":
                     isEmpty(name,value)
+                    spellcheck(name, getWords(value))
 
                 elif name == "Description":
                     hasTemplate(name,value)
                     isEmpty(name,value)
                     isTooBig(name,value)
+                    spellcheck(name, getWords(value))
                 
                 elif name == "Exploit Description": 
                     hasTemplate(name,value)
                     isEmpty(name,value)
                     isTooBig(name,value)
+                    spellcheck(name, getWords(value))
 
                 elif name == "Exploit Difficulty":
                     if not isEmpty(name,value) and value == "0":
                         print("[*]\t Flaw {} has a 0 value.".format(name))
+                    spellcheck(name, getWords(value))
 
                 elif name == "Input Vector":
                     isEmpty(name,value)
@@ -200,16 +207,19 @@ class xmlReport:
                 elif name == "Remediation":
                     hasTemplate(name,value)
                     isEmpty(name,value)
-                    isTooBig(name,value) 
+                    isTooBig(name,value)
+                    spellcheck(name, getWords(value))
 
                 elif name == "Remediation Effort":
                     if not isEmpty(name,value) and value == "0":
                         print("[*]\t Flaw {} has a 0 value.".format(name)) 
+                    spellcheck(name, getWords(value))
 
                 elif name == "Severity Description":
                     hasTemplate(name,value)
                     isEmpty(name,value)
                     isTooBig(name,value) 
+                    spellcheck(name, getWords(value))
 
                 elif name == "Appendix":
                     name = "Appendix Description"
@@ -217,6 +227,7 @@ class xmlReport:
                     
                     hasTemplate(name, value)
                     isEmpty(name, value)
+                    spellcheck(name, getWords(value))
 
             for num in range(int(self.flaws[flaw]["Flaw Appendix"]["Instance Count"])):
                 instanceBlock = self.flaws[flaw]["Flaw Appendix"]["Instance #"+str(num+1)]
@@ -229,6 +240,9 @@ class xmlReport:
 
                 inst = repoSteps.search(instanceBlock)
                 group = []
+                
+                reproStepsOnly = str(repoSteps4SpellChecker.search(instanceBlock))
+                spellcheck("Flaw Appendix Instance #"+str(num+1), getWords(reproStepsOnly))
 
                 if inst:
                     repoBlock = inst.group(2)
@@ -371,6 +385,21 @@ def fileExists(fileName):
         print("File error, {} was either not found or could not read it!".format(fileName))
         exit()
 
+def getWords(paragraph):
+    wordlist = re.findall(r'\w+', paragraph)
+    return wordlist
+
+def spellcheck(name, wordlist):
+    spell = SpellChecker(distance=1)
+    spell.word_frequency.load_text_file('spellcheck_whitelist.txt')
+    misspelled = spell.unknown(wordlist)
+    
+    for word in misspelled:
+        if (spell.correction(word) != word):
+            #misspelled.append(word)
+            print("[*]\t Flaw {} contains misspelled word \"{}\". Replace with \"{}\"".format(name, word, spell.correction(word)))
+    #return misspelled
+
 def main():
     parser = argparse.ArgumentParser(description='Checker for XML Veracode Reports.')
     parser.add_argument('file', help='XML file to check')
@@ -383,9 +412,11 @@ def main():
     asanaOutName = "AsanaList.txt"
     path_to_schema = "manualflawfeed.xsd"
     register_namespace("", "http://www.veracode.com/schema/import")
+    spellcheck_whitelist = "spellcheck_whitelist.txt"
     
     fileExists(xmlFile)
     fileExists(path_to_schema)
+    fileExists(spellcheck_whitelist)
 
     et = parse(xmlFile)
 
