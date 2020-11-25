@@ -1,5 +1,0 @@
-owasp
-mstg
-backgrounded
-xml
-pii
