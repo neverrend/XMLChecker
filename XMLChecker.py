@@ -173,24 +173,28 @@ class xmlReport:
 
                 elif name == "CWE":
                     isEmpty(name,value)
-                    spellcheck(name, getWords(value))
+                    if spellcheck_bool:
+                        spellcheck(name, getWords(value))
 
                 elif name == "Description":
                     hasTemplate(name,value)
                     isEmpty(name,value)
                     isTooBig(name,value)
-                    spellcheck(name, getWords(value))
+                    if spellcheck_bool:
+                        spellcheck(name, getWords(value))
                 
                 elif name == "Exploit Description": 
                     hasTemplate(name,value)
                     isEmpty(name,value)
                     isTooBig(name,value)
-                    spellcheck(name, getWords(value))
+                    if spellcheck_bool:
+                        spellcheck(name, getWords(value))
 
                 elif name == "Exploit Difficulty":
                     if not isEmpty(name,value) and value == "0":
                         print("[*]\t Flaw {} has a 0 value.".format(name))
-                    spellcheck(name, getWords(value))
+                    if spellcheck_bool:
+                        spellcheck(name, getWords(value))
 
                 elif name == "Input Vector":
                     isEmpty(name,value)
@@ -208,18 +212,21 @@ class xmlReport:
                     hasTemplate(name,value)
                     isEmpty(name,value)
                     isTooBig(name,value)
-                    spellcheck(name, getWords(value))
+                    if spellcheck_bool:
+                        spellcheck(name, getWords(value))
 
                 elif name == "Remediation Effort":
                     if not isEmpty(name,value) and value == "0":
                         print("[*]\t Flaw {} has a 0 value.".format(name)) 
-                    spellcheck(name, getWords(value))
+                    if spellcheck_bool:
+                        spellcheck(name, getWords(value))
 
                 elif name == "Severity Description":
                     hasTemplate(name,value)
                     isEmpty(name,value)
                     isTooBig(name,value) 
-                    spellcheck(name, getWords(value))
+                    if spellcheck_bool:
+                        spellcheck(name, getWords(value))
 
                 elif name == "Appendix":
                     name = "Appendix Description"
@@ -227,7 +234,8 @@ class xmlReport:
                     
                     hasTemplate(name, value)
                     isEmpty(name, value)
-                    spellcheck(name, getWords(value))
+                    if spellcheck_bool:
+                        spellcheck(name, getWords(value))
 
             for num in range(int(self.flaws[flaw]["Flaw Appendix"]["Instance Count"])):
                 instanceBlock = self.flaws[flaw]["Flaw Appendix"]["Instance #"+str(num+1)]
@@ -241,8 +249,9 @@ class xmlReport:
                 inst = repoSteps.search(instanceBlock)
                 group = []
                 
-                reproStepsOnly = str(repoSteps4SpellChecker.search(instanceBlock))
-                spellcheck("Flaw Appendix Instance #"+str(num+1), getWords(reproStepsOnly))
+                if spellcheck_bool:
+                    reproStepsOnly = str(repoSteps4SpellChecker.search(instanceBlock))
+                    spellcheck("Flaw Appendix Instance #"+str(num+1), getWords(reproStepsOnly))
 
                 if inst:
                     repoBlock = inst.group(2)
@@ -397,7 +406,7 @@ def spellcheck(name, wordlist):
     for word in misspelled:
         if (spell.correction(word) != word):
             #misspelled.append(word)
-            print("[*]\t Flaw {} contains misspelled word \"{}\". Replace with \"{}\"".format(name, word, spell.correction(word)))
+            print("[*]\t Flaw {} contains \"{}\". Replace with \"{}\"".format(name, word, spell.correction(word)))
     #return misspelled
 
 def main():
@@ -405,6 +414,7 @@ def main():
     parser.add_argument('file', help='XML file to check')
     parser.add_argument('-o', '--output', action='store_true', help='Output a new XML File with certain applied fixes')
     parser.add_argument('-l', '--list', action='store_true', help='Output a list of flaws for Asana')
+    parser.add_argument('-sc', '--spellcheck', action='store_true', help='Enable spellcheck')
     
     args = parser.parse_args()
     xmlFile = args.file
@@ -417,6 +427,11 @@ def main():
     fileExists(xmlFile)
     fileExists(path_to_schema)
     fileExists(spellcheck_whitelist)
+    
+    if args.spellcheck:
+        print('hello')
+        global spellcheck_bool
+        spellcheck_bool = True
 
     et = parse(xmlFile)
 
@@ -427,6 +442,8 @@ def main():
     if args.list:
         #print(newFile.content)
         writeToFile(asanaOutName, newFile.content)
+
+    
 
     if args.output:
         print("="*50+"\n")
@@ -441,4 +458,5 @@ def main():
             print("[*]\t Empty code blocks were discovered and removed. Utilize the NEW file for future reporting.")
 
 if __name__ == "__main__":
+    spellcheck_bool = False
     main()
