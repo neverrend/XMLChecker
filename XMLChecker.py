@@ -5,11 +5,14 @@ import base64
 import copy
 import json
 from lxml import etree
+import functools
 import os
 import re
 import sys
 import argparse
 from spellchecker import SpellChecker
+from colorama import init
+init()
 
 class xmlReport:
     def __init__(self):
@@ -408,16 +411,31 @@ def spellcheck(name, wordlist):
             #misspelled.append(word)
             print("[*]\t Flaw {} contains \"{}\". Replace with \"{}\"".format(name, word, spell.correction(word)))
     #return misspelled
+    
+def removeXMLs():
+    dir_name = os.getcwd()
+    dir_items = os.listdir(dir_name)
+
+    for item in dir_items:
+        if item.endswith(".xml"):
+            os.remove(os.path.join(dir_name, item))
 
 def main():
     parser = argparse.ArgumentParser(description='Checker for XML Veracode Reports.')
     parser.add_argument('file', help='XML file to check')
+    parser.add_argument('clear', action='store_true', help='Remove all XML files in working directory')
     parser.add_argument('-o', '--output', action='store_true', help='Output a new XML File with certain applied fixes')
     parser.add_argument('-l', '--list', action='store_true', help='Output a list of flaws for Asana')
     parser.add_argument('-sc', '--spellcheck', action='store_true', help='Enable spellcheck')
     
     args = parser.parse_args()
     xmlFile = args.file
+
+    if args.file.lower() == 'clear':
+        val = input("Delete all XML files in your directory? (Y or N)\n")
+        if (val.lower() == "yes" or val.lower() == "y"):
+            removeXMLs()
+        exit()
 
     asanaOutName = "AsanaList.txt"
     path_to_schema = "manualflawfeed.xsd"
@@ -442,8 +460,6 @@ def main():
     if args.list:
         #print(newFile.content)
         writeToFile(asanaOutName, newFile.content)
-
-    
 
     if args.output:
         print("="*50+"\n")
