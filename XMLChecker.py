@@ -450,7 +450,6 @@ def main():
     fileExists(spellcheck_whitelist)
     
     if args.spellcheck:
-        print('hello')
         global spellcheck_bool
         spellcheck_bool = True
 
