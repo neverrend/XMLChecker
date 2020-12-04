@@ -435,6 +435,9 @@ def main():
         val = input("Delete all XML files in your directory? (Y or N)\n")
         if (val.lower() == "yes" or val.lower() == "y"):
             removeXMLs()
+            print("XML files successfully deleted")
+        else:
+            print("Cancelled")
         exit()
 
     asanaOutName = "AsanaList.txt"
