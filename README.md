@@ -1,5 +1,5 @@
 # XMLChecker
-Cyber Ninjas XML Checker
+XML Checker
 
 ## Building Docker Image
 
